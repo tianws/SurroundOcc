@@ -1,0 +1,83 @@
+# Python
+**/__pycache__/
+**/*.py[cod]
+**/*.pyc
+**/*.pyo
+**/*.pyd
+
+# 虚拟环境
+venv/
+env/
+.env/
+.venv/
+conda/
+
+# 日志和调试
+*.log
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 数据和中间结果
+data/
+datasets/
+logs/
+outputs/
+results/
+*.pkl
+*.json
+*.h5
+*.hdf5
+
+# 模型权重和检查点
+*.pth
+*.pt
+*.ckpt
+*.model
+weights/
+checkpoints/
+
+# 可视化和图像结果
+visualizations/
+vis_results/
+*.png
+*.jpg
+*.jpeg
+*.gif
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 编译产物
+build/
+dist/
+*.egg-info/
+
+# 临时文件
+*.tmp
+*.bak
+temp/
+tmp/
+
+# CUDA和GPU相关
+*.cu
+*.cuh
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# 大文件和压缩文件
+*.zip
+*.tar
+*.gz
+*.rar
+
+# 特定于项目的忽略
+occupancy_results/
+occ_outputs/
+debug_images/
+.windsurfrules
+
+work_dirs/
