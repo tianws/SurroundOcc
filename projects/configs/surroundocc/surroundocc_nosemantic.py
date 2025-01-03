@@ -105,7 +105,7 @@ model = dict(
 )
 
 dataset_type = 'CustomNuScenesOccDataset'
-data_root = 'data/nuscenes/'
+data_root = '/home/datasets/ads_largedata/tianws/dataset/'
 file_client_args = dict(backend='disk')
 
 
@@ -131,11 +131,11 @@ test_pipeline = [
 find_unused_parameters = True
 data = dict(
     samples_per_gpu=1,
-    workers_per_gpu=4,
+    workers_per_gpu=1,
     train=dict(
         type=dataset_type,
         data_root=data_root,
-        ann_file='data/nuscenes_infos_train.pkl',
+        ann_file='/home/datasets/ads_largedata/tianws/dataset/nuscenes_occ/nuscenes_infos_val.pkl',
         pipeline=train_pipeline,
         modality=input_modality,
         test_mode=False,
@@ -147,7 +147,7 @@ data = dict(
         box_type_3d='LiDAR'),
     val=dict(type=dataset_type,
              data_root=data_root,
-             ann_file='data/nuscenes_infos_val.pkl',
+             ann_file='/home/datasets/ads_largedata/tianws/dataset/nuscenes_occ/nuscenes_infos_val.pkl',
              pipeline=test_pipeline,
              occ_size=occ_size,
              pc_range=point_cloud_range,
@@ -156,7 +156,7 @@ data = dict(
              modality=input_modality),
     test=dict(type=dataset_type,
               data_root=data_root,
-              ann_file='data/nuscenes_infos_val.pkl',
+              ann_file='/home/datasets/ads_largedata/tianws/dataset/nuscenes_occ/nuscenes_infos_val.pkl',
               pipeline=test_pipeline,
               occ_size=occ_size,
               pc_range=point_cloud_range,
