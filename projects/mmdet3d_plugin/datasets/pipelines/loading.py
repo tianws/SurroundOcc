@@ -26,7 +26,14 @@ class LoadOccupancy(object):
     def __call__(self, results):
         occ = np.load(results['occ_path'])
         occ = occ.astype(np.float32)
+
+        occ[:, 0] = (occ[:, 0] + 15) / 0.15
+        occ[:, 1] = (occ[:, 1] + 15) / 0.15
+        occ[:, 2] = (occ[:, 2] + 2.4) / 0.15
         
+        # for navinfo dataset
+        occ = np.pad(occ, ((0, 0), (0, 1)), mode='constant', constant_values=1)
+
         # class 0 is 'ignore' class
         if self.use_semantic:
             occ[..., 3][occ[..., 3] == 0] = 255

@@ -76,39 +76,49 @@ class CustomNuScenesOccDataset(NuScenesDataset):
 
         if self.modality['use_camera']:
             image_paths = []
-            lidar2img_rts = []
+            # lidar2img_rts = []
             lidar2cam_rts = []
             cam_intrinsics = []
+            cam_distortions = []
             for cam_type, cam_info in info['cams'].items():
-                image_paths.append(cam_info['data_path'])
-                # obtain lidar to image transformation matrix
+                # image_paths.append(cam_info['data_path'])
+                # # obtain lidar to image transformation matrix
 
-                if 'lidar2cam' in cam_info.keys():
-                    lidar2cam_rt = cam_info['lidar2cam'].T
-                else:
-                    lidar2cam_r = np.linalg.inv(cam_info['sensor2lidar_rotation'])
-                    lidar2cam_t = cam_info[
-                        'sensor2lidar_translation'] @ lidar2cam_r.T
-                    lidar2cam_rt = np.eye(4)
-                    lidar2cam_rt[:3, :3] = lidar2cam_r.T
-                    lidar2cam_rt[3, :3] = -lidar2cam_t
-                intrinsic = cam_info['cam_intrinsic']
-                viewpad = np.eye(4)
-                viewpad[:intrinsic.shape[0], :intrinsic.shape[1]] = intrinsic
+                # if 'lidar2cam' in cam_info.keys():
+                #     lidar2cam_rt = cam_info['lidar2cam'].T
+                # else:
+                #     lidar2cam_r = np.linalg.inv(cam_info['sensor2lidar_rotation'])
+                #     lidar2cam_t = cam_info[
+                #         'sensor2lidar_translation'] @ lidar2cam_r.T
+                #     lidar2cam_rt = np.eye(4)
+                #     lidar2cam_rt[:3, :3] = lidar2cam_r.T
+                #     lidar2cam_rt[3, :3] = -lidar2cam_t
+                # intrinsic = cam_info['cam_intrinsic']
+                # viewpad = np.eye(4)
+                # viewpad[:intrinsic.shape[0], :intrinsic.shape[1]] = intrinsic
 
                 
 
-                lidar2img_rt = (viewpad @ lidar2cam_rt.T)
-                lidar2img_rts.append(lidar2img_rt)
+                # lidar2img_rt = (viewpad @ lidar2cam_rt.T)
+                # lidar2img_rts.append(lidar2img_rt)
 
-                cam_intrinsics.append(viewpad)
-                lidar2cam_rts.append(lidar2cam_rt.T)
+                # cam_intrinsics.append(viewpad)
+                # lidar2cam_rts.append(lidar2cam_rt.T)
+                image_paths.append(cam_info['image_path'])
+                intrinsic = cam_info['intrinsic']
+                distortion = cam_info['distortion']
+                lidar2cam_rt = np.linalg.inv(np.array(cam_info['T_l2c']))
+
+                lidar2cam_rts.append(lidar2cam_rt)
+                cam_intrinsics.append(intrinsic)
+                cam_distortions.append(distortion)
 
             input_dict.update(
                 dict(
                     img_filename=image_paths,
-                    lidar2img=lidar2img_rts,
+                    lidar2img=lidar2cam_rts,  # 假的lidar2img,还需要去畸变
                     cam_intrinsic=cam_intrinsics,
+                    cam_distortion=cam_distortions,
                     lidar2cam=lidar2cam_rts,
                 ))
 

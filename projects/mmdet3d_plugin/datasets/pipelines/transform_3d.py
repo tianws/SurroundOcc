@@ -251,7 +251,7 @@ class CustomCollect3D(object):
                             'img_norm_cfg', 'pcd_trans', 'sample_idx', 'prev_idx', 'next_idx',
                             'pcd_scale_factor', 'pcd_rotation', 'pts_filename',
                             'transformation_3d_flow', 'scene_token',
-                            'can_bus', 'pc_range', 'occ_size', 'occ_path', 'lidar_token'
+                            'can_bus', 'pc_range', 'occ_size', 'occ_path', 'lidar_token', 'cam_intrinsic', 'cam_distortion'
                             )):
         self.keys = keys
         self.meta_keys = meta_keys

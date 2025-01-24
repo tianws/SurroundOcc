@@ -81,3 +81,5 @@ debug_images/
 .windsurfrules
 
 work_dirs/
+*.npy
+visual_dir**

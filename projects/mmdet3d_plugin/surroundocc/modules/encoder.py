@@ -79,8 +79,12 @@ class OccEncoder(TransformerLayerSequence):
     def point_sampling(self, reference_points, pc_range,  img_metas):
 
         lidar2img = []
+        intrinsic = []
+        distortion = []
         for img_meta in img_metas:
             lidar2img.append(img_meta['lidar2img'])
+            intrinsic.append(img_meta['cam_intrinsic'])
+            distortion.append(img_meta['cam_distortion'])
         lidar2img = np.asarray(lidar2img)
         lidar2img = reference_points.new_tensor(lidar2img)  # (B, N, 4, 4)
         reference_points = reference_points.clone()
@@ -100,18 +104,70 @@ class OccEncoder(TransformerLayerSequence):
         num_cam = lidar2img.size(1)
 
         reference_points = reference_points.view(
-            D, B, 1, num_query, 4).repeat(1, 1, num_cam, 1, 1).unsqueeze(-1)
+            D, B, 1, num_query, 4).repeat(1, 1, num_cam, 1, 1).unsqueeze(-1)  # (D, B, num_cam, num_query, 4, 1)
 
         lidar2img = lidar2img.view(
-            1, B, num_cam, 1, 4, 4).repeat(D, 1, 1, num_query, 1, 1)
+            1, B, num_cam, 1, 4, 4).repeat(D, 1, 1, num_query, 1, 1) # (D, B, num_cam, num_query, 4, 4)
 
         reference_points_cam = torch.matmul(lidar2img.to(torch.float32),
-                                            reference_points.to(torch.float32)).squeeze(-1)
+                                            reference_points.to(torch.float32)).squeeze(-1)  # (D, B, num_cam, num_query, 4)
         eps = 1e-5
 
         volume_mask = (reference_points_cam[..., 2:3] > eps)
+
+        # fisheye_project_points_torch
+        intrinsic = np.asarray(intrinsic)
+        intrinsic = reference_points_cam.new_tensor(intrinsic) # (B, num_cam, 3, 3)
+        distortion = np.asarray(distortion)
+        distortion = reference_points_cam.new_tensor(distortion) # (B, num_cam, 4)
+
+        #  1. 计算归一化坐标
         reference_points_cam = reference_points_cam[..., 0:2] / torch.maximum(
             reference_points_cam[..., 2:3], torch.ones_like(reference_points_cam[..., 2:3]) * eps)
+
+        # 2. 计算r²和r⁴
+        x = reference_points_cam[..., 0] # (D, B, num_cam, num_query)
+        y = reference_points_cam[..., 1] # (D, B, num_cam, num_query)
+        r2 = x*x + y*y      # (D, B, num_cam, num_query)
+
+        # 3. 计算 theta = atan(r)
+        theta = torch.atan(torch.sqrt(r2 + eps)) # (D, B, num_cam, num_query)
+        theta2 = theta * theta
+        theta4 = theta2 * theta2
+        theta6 = theta4 * theta2
+        theta8 = theta4 * theta4
+
+        # 4. 应用径向畸变 - 注意使用每个相机的畸变参数
+        # 需要扩展 distortion 到与 theta 相同的维度
+        distortion_expanded = distortion.unsqueeze(0).repeat(theta.shape[0], 1, 1, 1)  # (D, B, num_cam, 4)
+
+        theta_d = theta * (1 + 
+            distortion_expanded[..., 0:1] * theta2 + 
+            distortion_expanded[..., 1:2] * theta4 + 
+            distortion_expanded[..., 2:3] * theta6 + 
+            distortion_expanded[..., 3:4] * theta8
+        )
+
+        # 5. 计算畸变后的归一化坐标
+        x_d = x * theta_d / torch.maximum(torch.sqrt(r2 + eps), torch.tensor(eps))
+        y_d = y * theta_d / torch.maximum(torch.sqrt(r2 + eps), torch.tensor(eps))
+
+        # 6. 应用内参矩阵，计算像素坐标
+        # 扩展内参矩阵到与 reference_points_cam 相同的维度
+        intrinsic_expanded = intrinsic.unsqueeze(0).repeat(reference_points_cam.shape[0], 1, 1, 1, 1)  # (D, B, num_cam, 3, 3)
+
+        # 提取内参矩阵中的焦距和主点
+        fx = intrinsic_expanded[..., 0, 0]  # (D, B, num_cam)
+        fy = intrinsic_expanded[..., 1, 1]  # (D, B, num_cam)
+        cx = intrinsic_expanded[..., 0, 2]  # (D, B, num_cam)
+        cy = intrinsic_expanded[..., 1, 2]  # (D, B, num_cam)
+
+        # 计算像素坐标
+        u = fx.unsqueeze(-1) * x_d + cx.unsqueeze(-1)  # (D, B, num_cam, num_query)
+        v = fy.unsqueeze(-1) * y_d + cy.unsqueeze(-1)  # (D, B, num_cam, num_query)
+
+        # 更新 reference_points_cam
+        reference_points_cam = torch.stack([u, v], dim=-1)  # (D, B, num_cam, num_query, 2)
 
         reference_points_cam[..., 0] /= img_metas[0]['img_shape'][0][1]
         reference_points_cam[..., 1] /= img_metas[0]['img_shape'][0][0]
